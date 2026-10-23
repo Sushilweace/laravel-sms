@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\FeeController;
 use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\SchoolSettingsController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
@@ -42,7 +43,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Students Module
-    Route::prefix('students')->name('students.')->group(function () {
+    Route::prefix('students')->name('students.')->middleware('feature:students')->group(function () {
         Route::get('/', [StudentController::class, 'index'])->name('index');
         Route::get('/create', [StudentController::class, 'create'])->name('create');
         Route::post('/', [StudentController::class, 'store'])->name('store');
@@ -52,7 +53,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Staff Module
-    Route::prefix('staff')->name('staff.')->group(function () {
+    Route::prefix('staff')->name('staff.')->middleware('feature:staff')->group(function () {
         Route::get('/', [StaffController::class, 'index'])->name('index');
         Route::get('/create', [StaffController::class, 'create'])->name('create');
         Route::post('/', [StaffController::class, 'store'])->name('store');
@@ -60,14 +61,14 @@ Route::middleware('auth')->group(function () {
     });
 
     // Attendance Module
-    Route::prefix('attendance')->name('attendance.')->group(function () {
+    Route::prefix('attendance')->name('attendance.')->middleware('feature:attendance')->group(function () {
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
         Route::post('/', [AttendanceController::class, 'save'])->name('save');
         Route::get('/reports', [AttendanceController::class, 'reports'])->name('reports');
     });
 
     // Exams & Marks Module
-    Route::prefix('exams')->name('exams.')->group(function () {
+    Route::prefix('exams')->name('exams.')->middleware('feature:exams')->group(function () {
         Route::get('/', [ExamController::class, 'index'])->name('index');
         Route::get('/create', [ExamController::class, 'create'])->name('create');
         Route::post('/', [ExamController::class, 'store'])->name('store');
@@ -82,7 +83,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Fees & Receipts Module
-    Route::prefix('fees')->name('fees.')->group(function () {
+    Route::prefix('fees')->name('fees.')->middleware('feature:fees')->group(function () {
         Route::get('/', [FeeController::class, 'index'])->name('index');
         Route::post('/heads', [FeeController::class, 'storeHead'])->name('heads.store');
         Route::post('/structures', [FeeController::class, 'storeStructure'])->name('structures.store');
@@ -96,7 +97,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Notices Module
-    Route::prefix('notices')->name('notices.')->group(function () {
+    Route::prefix('notices')->name('notices.')->middleware('feature:notices')->group(function () {
         Route::get('/', [NoticeController::class, 'index'])->name('index');
         Route::get('/create', [NoticeController::class, 'create'])->name('create');
         Route::post('/', [NoticeController::class, 'store'])->name('store');
@@ -104,10 +105,17 @@ Route::middleware('auth')->group(function () {
     });
 
     // AI Assistant
-    Route::prefix('ai')->name('ai.')->group(function () {
+    Route::prefix('ai')->name('ai.')->middleware('feature:ai')->group(function () {
         Route::get('/', [AiController::class, 'index'])->name('index');
         Route::post('/generate-remarks', [AiController::class, 'generateRemarks'])->name('generate-remarks');
         Route::post('/draft-notice', [AiController::class, 'draftNotice'])->name('draft-notice');
         Route::post('/suggestions/{suggestion}/review', [AiController::class, 'reviewSuggestion'])->name('review-suggestion');
+    });
+
+    // School Settings & Feature Package Management
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/school', [SchoolSettingsController::class, 'edit'])->name('school');
+        Route::post('/school', [SchoolSettingsController::class, 'update'])->name('school.update');
+        Route::post('/school/calculate', [SchoolSettingsController::class, 'calculateApi'])->name('school.calculate');
     });
 });

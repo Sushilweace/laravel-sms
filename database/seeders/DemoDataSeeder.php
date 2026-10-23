@@ -43,7 +43,7 @@ class DemoDataSeeder extends Seeder
         $password = Hash::make('password123');
 
         // 1. School Profile & Settings
-        School::create([
+        $school = School::create([
             'name' => 'Greenwood International School',
             'code' => 'GIS-2026',
             'address' => '104 Education Enclave, Knowledge City, Bangalore, India',
@@ -51,6 +51,8 @@ class DemoDataSeeder extends Seeder
             'email' => 'contact@greenwood.test',
             'timezone' => 'Asia/Kolkata',
             'currency' => 'INR',
+            'package_tier' => 'enterprise',
+            'billing_cycle' => 'monthly',
         ]);
 
         Setting::set('school.timezone', 'Asia/Kolkata');
@@ -492,5 +494,7 @@ class DemoDataSeeder extends Seeder
             [['type' => 'role', 'role' => 'Parent'], ['type' => 'role', 'role' => 'Student']],
             $principalUser
         );
+
+        $school->recalculateAndSaveCharge();
     }
 }

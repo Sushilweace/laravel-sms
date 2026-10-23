@@ -14,9 +14,19 @@ class Money
         return bcsub(self::clean($a), self::clean($b), 2);
     }
 
+    public static function subtract(string|float|int $a, string|float|int $b): string
+    {
+        return self::sub($a, $b);
+    }
+
     public static function mul(string|float|int $a, string|float|int $b): string
     {
         return bcmul(self::clean($a), self::clean($b), 2);
+    }
+
+    public static function multiply(string|float|int $a, string|float|int $b): string
+    {
+        return self::mul($a, $b);
     }
 
     public static function div(string|float|int $a, string|float|int $b): string
@@ -29,11 +39,21 @@ class Money
         return bcdiv(self::clean($a), $bClean, 2);
     }
 
+    public static function divide(string|float|int $a, string|float|int $b): string
+    {
+        return self::div($a, $b);
+    }
+
     public static function percent(string|float|int $amount, string|float|int $percent): string
     {
         $raw = bcdiv(bcmul(self::clean($amount), self::clean($percent), 6), '100', 6);
 
         return self::roundHalfUp($raw);
+    }
+
+    public static function percentage(string|float|int $amount, string|float|int $percent): string
+    {
+        return self::percent($amount, $percent);
     }
 
     public static function roundHalfUp(string $value): string

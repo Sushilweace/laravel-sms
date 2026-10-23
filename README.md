@@ -57,6 +57,13 @@ A comprehensive, modular, end-to-end School Management System built from scratch
   - Fee Reminder Drafter (courteous payment notices).
 - **Human-in-the-Loop Governance**: AI outputs generate `ai_suggestions` with status `pending`; changes require human review before adoption.
 
+### 9. School-Level SaaS Feature Flags & Package Charge Calculator
+- **Institutional Feature Toggles**: Dynamic activation/deactivation of modules per school (`ai`, `reports`, `attendance`, `staff`, `students`, `exams`, `fees`, `notices`).
+- **Subscription Tiers**: Pre-configured tiers (**Starter**, **Standard**, **Premium**, **Enterprise**) plus a fully customizable modular plan.
+- **Dynamic Pricing Engine**: Computes exact billing quotes based on Base Platform Fee + Active Student Count × Modular Rate, with 15% discount for annual commitment.
+- **Graceful Upgrade Interceptors**: Protected by `feature:{module}` middleware. Accessing an unpurchased module presents a user-friendly upgrade prompt with plan suggestions.
+- **Blade Directive**: `@feature('ai') ... @endfeature` for seamless conditional sidebar navigation and dashboard widgets.
+
 ---
 
 ## 🔒 Security & Row-Level Data Scoping
