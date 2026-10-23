@@ -53,14 +53,17 @@ class AcademicYear extends Model
 
     public static function current(): ?static
     {
-        $cached = cache()->get('academic_year.current');
-        if ($cached) {
-            return $cached;
+        $id = cache()->get('academic_year.current_id');
+        if ($id) {
+            $found = static::find($id);
+            if ($found) {
+                return $found;
+            }
         }
 
         $year = static::where('is_current', 1)->first() ?? static::where('is_locked', 0)->first() ?? static::first();
         if ($year) {
-            cache()->forever('academic_year.current', $year);
+            cache()->forever('academic_year.current_id', $year->id);
         }
 
         return $year;

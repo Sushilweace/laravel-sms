@@ -15,5 +15,6 @@ class SetCurrentAcademicYear
         });
 
         cache()->forget('academic_year.current');
+        cache()->forget('academic_year.current_id');
     }
 }
