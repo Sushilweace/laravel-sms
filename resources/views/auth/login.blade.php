@@ -33,13 +33,13 @@
                 @csrf
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
-                    <input type="email" name="email" value="{{ old('email', 'superadmin@school.test') }}" required autofocus
+                    <input type="email" name="email" value="{{ old('email', !app()->isProduction() ? 'superadmin@school.test' : '') }}" required autofocus
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-                    <input type="password" name="password" value="password123" required
+                    <input type="password" name="password" value="{{ !app()->isProduction() ? 'password123' : '' }}" required
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                 </div>
 
@@ -55,7 +55,8 @@
                 </button>
             </form>
 
-            <!-- Quick Demo Login Switcher -->
+            <!-- Quick Demo Login Switcher (Local & Demo Environments Only) -->
+            @if(!app()->isProduction() || config('app.demo_mode', false))
             <div class="mt-8 pt-6 border-t border-slate-200">
                 <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3">
                     Instant Demo Login (One-Click)
@@ -81,6 +82,7 @@
                     </a>
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </body>

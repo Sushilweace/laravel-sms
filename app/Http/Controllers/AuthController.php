@@ -53,6 +53,10 @@ class AuthController extends Controller
 
     public function quickLogin(string $role): RedirectResponse
     {
+        if (app()->isProduction() && ! config('app.demo_mode', false)) {
+            abort(404, 'Demo quick-login is disabled in production.');
+        }
+
         $roleMap = [
             'superadmin' => 'superadmin@school.test',
             'principal' => 'principal@school.test',

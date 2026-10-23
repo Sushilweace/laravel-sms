@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\School;
 use App\Models\User;
 use App\Support\PackagePricing;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SchoolFeatureAndPackageTest extends TestCase

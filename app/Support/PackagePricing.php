@@ -5,18 +5,29 @@ namespace App\Support;
 class PackagePricing
 {
     public const FEATURE_STUDENTS = 'students';
+
     public const FEATURE_STAFF = 'staff';
+
     public const FEATURE_ATTENDANCE = 'attendance';
+
     public const FEATURE_EXAMS = 'exams';
+
     public const FEATURE_REPORTS = 'reports';
+
     public const FEATURE_FEES = 'fees';
+
     public const FEATURE_NOTICES = 'notices';
+
     public const FEATURE_AI = 'ai';
 
     public const TIER_STARTER = 'starter';
+
     public const TIER_STANDARD = 'standard';
+
     public const TIER_PREMIUM = 'premium';
+
     public const TIER_ENTERPRISE = 'enterprise';
+
     public const TIER_CUSTOM = 'custom';
 
     /**
