@@ -3,6 +3,7 @@
 use App\Http\Controllers\AcademicController;
 use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\MailLogController;
+use App\Http\Controllers\Admin\SchoolManagementController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
@@ -116,6 +117,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/draft-notice', [AiController::class, 'draftNotice'])->name('draft-notice');
         Route::post('/suggestions/{suggestion}/review', [AiController::class, 'reviewSuggestion'])->name('review-suggestion');
     });
+
+    // School Management (Multi-Campus Registry & Child Entity Inspector)
+    Route::resource('admin/schools', SchoolManagementController::class)->names('admin.schools');
 
     // School Settings & Feature Package Management
     Route::prefix('settings')->name('settings.')->group(function () {

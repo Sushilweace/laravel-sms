@@ -17,6 +17,7 @@ class Staff extends Model
     use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
+        'school_id',
         'user_id',
         'employee_code',
         'first_name',
@@ -46,6 +47,11 @@ class Staff extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function teachingAssignments(): HasMany

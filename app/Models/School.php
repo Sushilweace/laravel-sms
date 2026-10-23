@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Support\PackagePricing;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class School extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'parent_id',
         'name',
         'code',
         'address',
@@ -110,5 +113,57 @@ class School extends Model
         $this->update(['package_charge' => $quote['final_charge']]);
 
         return $quote;
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(School::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(School::class, 'parent_id');
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->children();
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    public function staff(): HasMany
+    {
+        return $this->hasMany(Staff::class);
+    }
+
+    public function teachers(): HasMany
+    {
+        return $this->hasMany(Staff::class)->where(function ($q) {
+            $q->where('designation', 'like', '%teacher%')
+                ->orWhereHas('user.roles', fn ($r) => $r->where('name', 'Teacher'));
+        });
+    }
+
+    public function accountants(): HasMany
+    {
+        return $this->hasMany(Staff::class)->where(function ($q) {
+            $q->where('designation', 'like', '%accountant%')
+                ->orWhere('designation', 'like', '%bursar%')
+                ->orWhereHas('user.roles', fn ($r) => $r->where('name', 'Accountant'));
+        });
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function academicYears(): HasMany
+    {
+        return $this->hasMany(AcademicYear::class);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,6 +19,7 @@ class User extends Authenticatable
     use HasFactory, HasRoles, LogsActivity, Notifiable, SoftDeletes;
 
     protected $fillable = [
+        'school_id',
         'name',
         'email',
         'phone',
@@ -58,6 +60,11 @@ class User extends Authenticatable
     public function student(): HasOne
     {
         return $this->hasOne(Student::class);
+    }
+
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function guardian(): HasOne
