@@ -6,6 +6,44 @@
 @section('content')
 <div class="space-y-8">
 
+    @if(auth()->user()->hasRole('Teacher'))
+    <!-- Faculty Schedule & Assignments Banner -->
+    <div class="bg-indigo-900 text-white rounded-2xl p-6 shadow-md border border-indigo-800">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-800 text-indigo-200 uppercase tracking-wider">
+                    Faculty Teaching & Class Roles
+                </span>
+                <h2 class="text-lg font-bold text-white mt-1">My Class & Teaching Assignments</h2>
+                <p class="text-xs text-indigo-200 mt-0.5">Classes, sections, and curriculum subjects assigned to you for academic year {{ $currentYear?->name }}.</p>
+            </div>
+            @if(isset($classTeacherSections) && $classTeacherSections->isNotEmpty())
+                <div class="px-3 py-1.5 rounded-xl bg-indigo-800/80 border border-indigo-700 text-xs">
+                    <span class="text-indigo-300">Class Teacher:</span>
+                    <strong class="text-emerald-300 ml-1">{{ $classTeacherSections->pluck('full_name')->join(', ') }}</strong>
+                </div>
+            @endif
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            @if(isset($teacherAssignments) && $teacherAssignments->isNotEmpty())
+                @foreach($teacherAssignments as $assignment)
+                    <div class="bg-indigo-800/60 p-3.5 rounded-xl border border-indigo-700">
+                        <div class="text-xs text-indigo-300 font-semibold uppercase">{{ $assignment->subject->code }}</div>
+                        <div class="text-sm font-bold text-white mt-0.5">{{ $assignment->subject->name }}</div>
+                        <div class="text-xs text-indigo-200 mt-2 flex items-center justify-between">
+                            <span>Class: <strong>{{ $assignment->section->full_name }}</strong></span>
+                            <a href="{{ route('attendance.index', ['section_id' => $assignment->section_id]) }}" class="underline text-indigo-300 hover:text-white">Attendance →</a>
+                        </div>
+                    </div>
+                @endforeach
+            @else
+                <div class="text-xs text-indigo-300 col-span-3">No subject teaching assignments registered for this academic session yet.</div>
+            @endif
+        </div>
+    </div>
+    @endif
+
     <!-- 1. Academic Years Section -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -13,6 +51,7 @@
                 <h3 class="font-bold text-slate-900 text-base">Academic Years</h3>
                 <p class="text-xs text-slate-500 mt-0.5">Exactly one year is active at any time. Locked years become read-only.</p>
             </div>
+            @can('academic.manage')
             <!-- Add Year Form Modal Trigger or Inline Form -->
             <form action="{{ route('academic.years.store') }}" method="POST" class="flex items-center gap-2 flex-wrap">
                 @csrf
@@ -23,6 +62,7 @@
                     + Add Year
                 </button>
             </form>
+            @endcan
         </div>
 
         <div class="overflow-x-auto">
@@ -33,7 +73,9 @@
                         <th class="py-2.5 px-4">Starts On</th>
                         <th class="py-2.5 px-4">Ends On</th>
                         <th class="py-2.5 px-4">Status</th>
+                        @can('academic.manage')
                         <th class="py-2.5 px-4 text-right">Actions</th>
+                        @endcan
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -53,6 +95,7 @@
                                 <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded ml-1 font-semibold">🔒 Locked</span>
                             @endif
                         </td>
+                        @can('academic.manage')
                         <td class="py-3 px-4 text-right space-x-2">
                             @if(!$year->is_current)
                             <form action="{{ route('academic.years.set-current', $year) }}" method="POST" class="inline">
@@ -67,6 +110,7 @@
                             </form>
                             @endif
                         </td>
+                        @endcan
                     </tr>
                     @endforeach
                 </tbody>
@@ -109,6 +153,7 @@
                         </div>
                     </div>
 
+                    @can('academic.manage')
                     <!-- Add Section Quick Form -->
                     <form action="{{ route('academic.sections.store') }}" method="POST" class="flex items-center gap-1.5">
                         @csrf
@@ -125,11 +170,13 @@
                             + Add
                         </button>
                     </form>
+                    @endcan
                 </div>
                 @endforeach
             </div>
         </div>
 
+        @can('academic.manage')
         <!-- Add Class Card -->
         <div class="space-y-6">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -197,6 +244,7 @@
                 </form>
             </div>
         </div>
+        @endcan
     </div>
 
     <!-- 3. Subjects Catalog -->
@@ -206,6 +254,7 @@
                 <h3 class="font-bold text-slate-900 text-base">Curriculum Subjects</h3>
                 <p class="text-xs text-slate-500 mt-0.5">Global subjects taught across classes.</p>
             </div>
+            @can('academic.manage')
             <form action="{{ route('academic.subjects.store') }}" method="POST" class="flex items-center gap-2">
                 @csrf
                 <input type="text" name="name" placeholder="Subject Name" required class="text-xs px-3 py-1.5 rounded-lg border border-slate-300">
@@ -219,6 +268,7 @@
                     + Add Subject
                 </button>
             </form>
+            @endcan
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

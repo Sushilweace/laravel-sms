@@ -43,15 +43,23 @@ class StudentController extends Controller
         }
 
         if ($request->filled('section_id')) {
-            $query->whereHas('currentEnrollment', function ($q) use ($request) {
-                $q->where('section_id', $request->input('section_id'));
+            $reqSectionId = (int) $request->input('section_id');
+            if ($user->hasRole('Teacher') && $user->staff && ! $user->staff->visibleSectionIds()->contains($reqSectionId)) {
+                abort(403, 'Unauthorized access to unassigned class section.');
+            }
+
+            $query->whereHas('currentEnrollment', function ($q) use ($reqSectionId) {
+                $q->where('section_id', $reqSectionId);
             });
         }
 
         $students = $query->paginate(15)->withQueryString();
-        $sections = Section::where('academic_year_id', AcademicYear::current()?->id)
-            ->with('schoolClass')
-            ->get();
+
+        $sectionsQuery = Section::where('academic_year_id', AcademicYear::current()?->id)->with('schoolClass');
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+        $sections = $sectionsQuery->get();
 
         return view('students.index', compact('students', 'sections'));
     }

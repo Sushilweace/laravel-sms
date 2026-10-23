@@ -114,6 +114,12 @@ class AttendanceController extends Controller
 
         $section = Section::findOrFail($data['section_id']);
 
+        if ($user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $data['section_id'])) {
+                abort(403, 'Unauthorized. Teachers can only record daily attendance for their assigned class sections.');
+            }
+        }
+
         try {
             $marker->execute($section, $data['date'], $data['attendance'], $user, $data['edit_reason'] ?? null);
 
@@ -133,8 +139,19 @@ class AttendanceController extends Controller
         }
 
         $currentYear = AcademicYear::current();
-        $sections = Section::where('academic_year_id', $currentYear?->id)->with('schoolClass')->get();
+        $sectionsQuery = Section::where('academic_year_id', $currentYear?->id)->with('schoolClass');
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+        $sections = $sectionsQuery->get();
+
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);
+        if ($selectedSectionId && $user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $selectedSectionId)) {
+                abort(403, 'Unauthorized access to attendance report of unassigned class section.');
+            }
+        }
+
         $lowThreshold = (int) Setting::get('attendance.low_threshold', 75);
 
         $summaries = collect();

@@ -30,11 +30,29 @@ class AcademicController extends Controller
         $subjects = Subject::all();
         $staffMembers = Staff::where('status', 'active')->get();
 
-        return view('academic.index', compact('years', 'currentYear', 'classes', 'subjects', 'staffMembers'));
+        $teacherAssignments = collect();
+        $classTeacherSections = collect();
+        if (auth()->user()->hasRole('Teacher') && auth()->user()->staff) {
+            $staff = auth()->user()->staff;
+            $teacherAssignments = TeachingAssignment::where('staff_id', $staff->id)
+                ->where('academic_year_id', $currentYear?->id)
+                ->with(['section.schoolClass', 'subject'])
+                ->get();
+            $classTeacherSections = Section::where('class_teacher_id', $staff->id)
+                ->where('academic_year_id', $currentYear?->id)
+                ->with('schoolClass')
+                ->get();
+        }
+
+        return view('academic.index', compact('years', 'currentYear', 'classes', 'subjects', 'staffMembers', 'teacherAssignments', 'classTeacherSections'));
     }
 
     public function storeYear(Request $request): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:20|unique:academic_years,name',
             'starts_on' => 'required|date',
@@ -52,6 +70,10 @@ class AcademicController extends Controller
 
     public function setCurrentYear(AcademicYear $year): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         (new SetCurrentAcademicYear)->execute($year);
 
         return back()->with('success', "Active academic year set to {$year->name}.");
@@ -59,6 +81,10 @@ class AcademicController extends Controller
 
     public function lockYear(AcademicYear $year): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         (new LockAcademicYear)->execute($year);
 
         return back()->with('success', "Academic year {$year->name} is now locked.");
@@ -66,6 +92,10 @@ class AcademicController extends Controller
 
     public function storeClass(Request $request): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:50|unique:school_classes,name',
             'numeric_level' => 'required|integer|min:1|max:20',
@@ -79,6 +109,10 @@ class AcademicController extends Controller
 
     public function storeSection(Request $request): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'school_class_id' => 'required|exists:school_classes,id',
             'academic_year_id' => 'required|exists:academic_years,id',
@@ -94,6 +128,10 @@ class AcademicController extends Controller
 
     public function storeSubject(Request $request): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'code' => 'required|string|max:20|unique:subjects,code',
@@ -107,6 +145,10 @@ class AcademicController extends Controller
 
     public function assignTeaching(Request $request): RedirectResponse
     {
+        if (! auth()->user()->can('academic.manage')) {
+            abort(403, 'Unauthorized. Modifying academic configurations requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'subject_id' => 'required|exists:subjects,id',

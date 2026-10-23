@@ -183,11 +183,28 @@ class ExamController extends Controller
 
     public function enterMarksView(Exam $exam, ExamSubject $examSubject, Request $request): View
     {
-        $sections = Section::where('school_class_id', $examSubject->school_class_id)
-            ->where('academic_year_id', $exam->academic_year_id)
-            ->get();
+        /** @var User $user */
+        $user = Auth::user();
+
+        $sectionsQuery = Section::where('school_class_id', $examSubject->school_class_id)
+            ->where('academic_year_id', $exam->academic_year_id);
+
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+
+        $sections = $sectionsQuery->get();
+
+        if ($user->hasRole('Teacher') && $sections->isEmpty()) {
+            abort(403, 'Unauthorized. You are not assigned to any section for this class or subject.');
+        }
 
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);
+        if ($selectedSectionId && $user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $selectedSectionId)) {
+                abort(403, 'Unauthorized. You cannot enter marks for an unassigned class section.');
+            }
+        }
 
         $enrollments = Enrollment::where('section_id', $selectedSectionId)
             ->where('status', 'active')
@@ -214,6 +231,15 @@ class ExamController extends Controller
             'remarks' => 'nullable|array',
             'change_reason' => 'nullable|string|max:255',
         ]);
+
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $allowedEnrollments = Enrollment::whereIn('section_id', $user->staff->visibleSectionIds())->pluck('id')->toArray();
+            foreach (array_keys($data['marks']) as $enrId) {
+                if (! in_array((int) $enrId, $allowedEnrollments)) {
+                    abort(403, 'Unauthorized. You can only enter marks for students in your assigned sections.');
+                }
+            }
+        }
 
         try {
             foreach ($data['marks'] as $enrollmentId => $score) {
@@ -281,15 +307,33 @@ class ExamController extends Controller
 
     public function classMarksheet(Exam $exam, Request $request): View|Response|StreamedResponse
     {
-        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
             abort(403, 'Unauthorized. Consolidated class marksheets can only be accessed by teachers and administrators.');
         }
 
         $classIds = $exam->examSubjects()->pluck('school_class_id')->unique();
-        $sections = Section::whereIn('school_class_id', $classIds)
+        $sectionsQuery = Section::whereIn('school_class_id', $classIds)
             ->where('academic_year_id', $exam->academic_year_id)
-            ->with('schoolClass')
-            ->get();
+            ->with('schoolClass');
+
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+
+        $sections = $sectionsQuery->get();
+
+        if ($user->hasRole('Teacher') && $sections->isEmpty()) {
+            abort(403, 'Unauthorized. You do not have assigned sections for this examination.');
+        }
+
+        if ($request->filled('section_id') && $user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $request->input('section_id'))) {
+                abort(403, 'Unauthorized access to unassigned section marksheet.');
+            }
+        }
 
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);
         $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
@@ -430,10 +474,28 @@ class ExamController extends Controller
 
     public function downloadSubjectMarksheet(Exam $exam, ExamSubject $examSubject, Request $request): Response|StreamedResponse
     {
+        /** @var User $user */
+        $user = Auth::user();
+
         $examSubject->load(['subject', 'schoolClass']);
-        $sections = Section::where('school_class_id', $examSubject->school_class_id)
-            ->where('academic_year_id', $exam->academic_year_id)
-            ->get();
+        $sectionsQuery = Section::where('school_class_id', $examSubject->school_class_id)
+            ->where('academic_year_id', $exam->academic_year_id);
+
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+
+        $sections = $sectionsQuery->get();
+
+        if ($user->hasRole('Teacher') && $sections->isEmpty()) {
+            abort(403, 'Unauthorized. You are not assigned to this subject or class section.');
+        }
+
+        if ($request->filled('section_id') && $user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $request->input('section_id'))) {
+                abort(403, 'Unauthorized access to unassigned section subject marksheet.');
+            }
+        }
 
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);
         $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
@@ -489,7 +551,10 @@ class ExamController extends Controller
 
     public function bulkMarksheetsZip(Exam $exam, Request $request)
     {
-        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
             abort(403, 'Unauthorized. Bulk marksheet export is restricted to faculty.');
         }
 
@@ -497,10 +562,25 @@ class ExamController extends Controller
         $school = School::current() ?? School::first();
 
         $classIds = $exam->examSubjects()->pluck('school_class_id')->unique();
-        $sections = Section::whereIn('school_class_id', $classIds)
+        $sectionsQuery = Section::whereIn('school_class_id', $classIds)
             ->where('academic_year_id', $exam->academic_year_id)
-            ->with('schoolClass')
-            ->get();
+            ->with('schoolClass');
+
+        if ($user->hasRole('Teacher') && $user->staff) {
+            $sectionsQuery->whereIn('id', $user->staff->visibleSectionIds());
+        }
+
+        $sections = $sectionsQuery->get();
+
+        if ($user->hasRole('Teacher') && $sections->isEmpty()) {
+            abort(403, 'Unauthorized. You do not have assigned sections for bulk marksheet export.');
+        }
+
+        if ($request->filled('section_id') && $user->hasRole('Teacher') && $user->staff) {
+            if (! $user->staff->visibleSectionIds()->contains((int) $request->input('section_id'))) {
+                abort(403, 'Unauthorized access to bulk marksheets for unassigned section.');
+            }
+        }
 
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);
         $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
