@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademicYear extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackable;
 
     protected $fillable = [
         'name',
@@ -17,6 +18,8 @@ class AcademicYear extends Model
         'ends_on',
         'is_current',
         'is_locked',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

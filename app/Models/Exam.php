@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Exam extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
         'name',
@@ -27,6 +28,8 @@ class Exam extends Model
         'locked_at',
         'locked_by',
         'results_computed_at',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

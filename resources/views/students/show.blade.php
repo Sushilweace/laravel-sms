@@ -114,6 +114,27 @@
                 <p class="text-slate-400">No guardian registered.</p>
                 @endforelse
             </div>
+
+            <!-- Audit & Record Tracking Metadata -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 text-[11px] text-slate-500 space-y-1.5">
+                <div class="font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-2 border-b border-slate-100 pb-1">Audit Record Tracking</div>
+                <div class="flex justify-between">
+                    <span>Created By:</span>
+                    <strong class="text-slate-800">{{ $student->creator->name ?? 'System / Seeder' }}</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Created On:</span>
+                    <span class="font-mono">{{ $student->created_at->format('d M Y, h:i A') }}</span>
+                </div>
+                <div class="flex justify-between pt-1 border-t border-slate-100">
+                    <span>Last Updated By:</span>
+                    <strong class="text-slate-800">{{ $student->updater->name ?? ($student->creator->name ?? 'System') }}</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Updated On:</span>
+                    <span class="font-mono">{{ $student->updated_at->format('d M Y, h:i A') }}</span>
+                </div>
+            </div>
         </div>
 
         <!-- Right Column: Academic Records, Attendance, Exams, Fees -->

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,12 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SchoolClass extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackable;
 
     protected $fillable = [
         'name',
         'numeric_level',
         'next_class_id',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

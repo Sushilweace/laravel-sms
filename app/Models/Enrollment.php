@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Enrollment extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, UserTrackable;
 
     protected $fillable = [
         'student_id',
@@ -22,6 +23,8 @@ class Enrollment extends Model
         'status',
         'enrolled_on',
         'left_on',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

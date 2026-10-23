@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Notice extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackable;
 
     protected $fillable = [
         'title',
@@ -23,6 +24,7 @@ class Notice extends Model
         'expires_at',
         'created_by',
         'approved_by',
+        'updated_by',
     ];
 
     protected $casts = [

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AcademicController;
+use App\Http\Controllers\Admin\ErrorLogController;
+use App\Http\Controllers\Admin\MailLogController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
@@ -120,5 +122,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/school', [SchoolSettingsController::class, 'edit'])->name('school');
         Route::post('/school', [SchoolSettingsController::class, 'update'])->name('school.update');
         Route::post('/school/calculate', [SchoolSettingsController::class, 'calculateApi'])->name('school.calculate');
+    });
+
+    // Admin Logs (Error Logs & Mail / Notification Sent Logs)
+    Route::prefix('admin/logs')->name('admin.logs.')->group(function () {
+        Route::get('/errors', [ErrorLogController::class, 'index'])->name('errors');
+        Route::get('/errors/download', [ErrorLogController::class, 'download'])->name('errors.download');
+        Route::post('/errors/clear', [ErrorLogController::class, 'clear'])->name('errors.clear');
+
+        Route::get('/mail', [MailLogController::class, 'index'])->name('mail');
+        Route::get('/mail/{log}', [MailLogController::class, 'show'])->name('mail.show');
+        Route::post('/mail/{log}/resend', [MailLogController::class, 'resend'])->name('mail.resend');
+        Route::post('/mail/test', [MailLogController::class, 'sendTest'])->name('mail.test');
     });
 });

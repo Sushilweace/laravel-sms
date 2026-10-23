@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Invoice extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
         'invoice_number',
@@ -26,6 +27,8 @@ class Invoice extends Model
         'fine_amount',
         'paid_total',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

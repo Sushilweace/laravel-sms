@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FeeStructure extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackable;
 
     protected $fillable = [
         'fee_head_id',
@@ -17,6 +18,8 @@ class FeeStructure extends Model
         'amount',
         'frequency',
         'due_day',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationLog extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackable;
 
     protected $fillable = [
         'recipient_id',
@@ -19,6 +20,8 @@ class NotificationLog extends Model
         'status',
         'error_message',
         'sent_at',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

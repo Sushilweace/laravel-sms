@@ -66,6 +66,15 @@
                 @endif
             </div>
         </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+            <div>
+                Created by: <strong class="text-slate-800">{{ $exam->creator->name ?? 'System' }}</strong> on {{ $exam->created_at->format('d M Y, h:i A') }}
+            </div>
+            <div>
+                Last updated by: <strong class="text-slate-800">{{ $exam->updater->name ?? ($exam->creator->name ?? 'System') }}</strong> on {{ $exam->updated_at->format('d M Y, h:i A') }}
+            </div>
+        </div>
     </div>
 
     <!-- Exam Subjects & Marks Entry Links -->

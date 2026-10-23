@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Student extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
         'user_id',
@@ -33,6 +34,8 @@ class Student extends Model
         'postal_code',
         'photo_path',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

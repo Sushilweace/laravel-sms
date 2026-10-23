@@ -64,6 +64,14 @@ A comprehensive, modular, end-to-end School Management System built from scratch
 - **Graceful Upgrade Interceptors**: Protected by `feature:{module}` middleware. Accessing an unpurchased module presents a user-friendly upgrade prompt with plan suggestions.
 - **Blade Directive**: `@feature('ai') ... @endfeature` for seamless conditional sidebar navigation and dashboard widgets.
 
+### 10. Admin Diagnostics, Mail Sent Logs & 4-Point Audit Tracking
+- **System Error Log Viewer** (`/admin/logs/errors`): Built-in log analyzer parsing `storage/logs/laravel.log` with severity filtering (`CRITICAL`, `ERROR`, `WARNING`, `INFO`), expandable stack traces, search, and 1-click log purge & download.
+- **Mail & SMS Sent Log Viewer** (`/admin/logs/mail`): Real-time delivery registry tracking email, SMS, and WhatsApp dispatches, failure reasons, message body inspector, and 1-click re-dispatch/resend capability.
+- **Automated Audit Tracking (`UserTrackable`)**: Universal 4-point audit tracking across all 29 domain tables:
+  - `created_at`, `created_by` (automatically resolves to `Auth::id()`)
+  - `updated_at`, `updated_by` (automatically tracks modifying user)
+  - `$model->creator` and `$model->updater` relationships with visible tracking cards across records.
+
 ---
 
 ## 🔒 Security & Row-Level Data Scoping

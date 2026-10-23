@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Payment extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
         'payment_number',
@@ -27,6 +28,8 @@ class Payment extends Model
         'reversed_at',
         'collected_by',
         'notes',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

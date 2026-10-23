@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UserTrackable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Staff extends Model
 {
-    use HasFactory, LogsActivity, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes, UserTrackable;
 
     protected $fillable = [
         'user_id',
@@ -27,6 +28,8 @@ class Staff extends Model
         'email',
         'joining_date',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
