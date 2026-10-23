@@ -195,10 +195,31 @@
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <!-- Top Bar with Quick Role Switcher -->
+            <!-- Top Bar with Active Campus Switcher & Quick Role Switcher -->
             <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4 flex-wrap">
                     <h1 class="text-lg font-bold text-slate-900 leading-tight">@yield('page-title', 'Dashboard')</h1>
+
+                    <!-- Active Campus Selector -->
+                    @if(isset($allSchools) && $allSchools->count() > 1 && (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('School Admin')))
+                        <form method="POST" action="{{ route('admin.schools.switch-active') }}" class="flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-200 rounded-xl px-2.5 py-1">
+                            @csrf
+                            <span class="text-[11px] font-bold text-indigo-800 flex items-center gap-1">
+                                <span>🏫</span> Campus:
+                            </span>
+                            <select name="school_id" onchange="this.form.submit()" class="text-xs font-bold rounded-lg border-indigo-300 py-0.5 px-2 bg-white text-indigo-900 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm cursor-pointer">
+                                @foreach($allSchools as $s)
+                                    <option value="{{ $s->id }}" {{ ($currentSchool?->id == $s->id) ? 'selected' : '' }}>
+                                        {{ $s->name }} ({{ $s->code }}) {{ $s->parent_id ? '↳ Branch' : '★ Root' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @elseif($currentSchool)
+                        <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+                            <span>🏫</span> {{ $currentSchool->name }}
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Quick Switcher for Testing Different Roles -->

@@ -98,4 +98,19 @@ class ExamAndResultsTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('content-type', 'application/pdf');
     }
+
+    public function test_bulk_student_marksheets_zip_download(): void
+    {
+        $principal = User::where('email', 'principal@school.test')->first();
+        $publishedExam = Exam::where('status', 'published')->first();
+
+        if (! $principal || ! $publishedExam) {
+            $this->markTestSkipped('Principal and published exam required.');
+        }
+
+        $response = $this->actingAs($principal)->get("/exams/{$publishedExam->id}/bulk-marksheets");
+        $response->assertStatus(200);
+        $this->assertStringContainsString('application/zip', $response->headers->get('content-type'));
+        $this->assertStringContainsString('.zip', $response->headers->get('content-disposition'));
+    }
 }

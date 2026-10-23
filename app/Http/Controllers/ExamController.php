@@ -435,4 +435,85 @@ class ExamController extends Controller
 
         return $pdf->download("Subject-Marksheet-{$examSubject->subject->name}-{$exam->name}.pdf");
     }
+
+    public function bulkMarksheetsZip(Exam $exam, Request $request)
+    {
+        $exam->load(['gradeScale.grades']);
+        $school = School::current() ?? School::first();
+
+        $classIds = $exam->examSubjects()->pluck('school_class_id')->unique();
+        $sections = Section::whereIn('school_class_id', $classIds)
+            ->where('academic_year_id', $exam->academic_year_id)
+            ->with('schoolClass')
+            ->get();
+
+        $selectedSectionId = $request->input('section_id', $sections->first()?->id);
+        $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
+
+        if (! $section) {
+            return back()->with('error', 'No sections found for this exam.');
+        }
+
+        $enrollments = Enrollment::where('section_id', $section->id)
+            ->where('status', 'active')
+            ->with(['student', 'section.schoolClass'])
+            ->orderBy('roll_number')
+            ->get();
+
+        if ($enrollments->isEmpty()) {
+            return back()->with('error', 'No active students enrolled in this section.');
+        }
+
+        $allResults = $exam->results()
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->get()
+            ->keyBy('enrollment_id');
+
+        $allMarks = Mark::whereHas('examSubject', fn ($q) => $q->where('exam_id', $exam->id))
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->with(['examSubject.subject'])
+            ->get()
+            ->groupBy('enrollment_id');
+
+        // Create temporary zip archive
+        $zipFile = tempnam(sys_get_temp_dir(), 'sms_marksheets_');
+        $zip = new \ZipArchive;
+
+        if ($zip->open($zipFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'Could not create ZIP archive for marksheets.');
+        }
+
+        $pdfCount = 0;
+        foreach ($enrollments as $enrollment) {
+            $result = $allResults[$enrollment->id] ?? null;
+            if (! $result) {
+                continue;
+            }
+
+            $marks = $allMarks[$enrollment->id] ?? collect();
+            $data = compact('exam', 'enrollment', 'result', 'marks', 'school');
+
+            $pdf = Pdf::loadView('exams.report-card-pdf', $data);
+            $roll = str_pad((string) ($enrollment->roll_number ?? 0), 2, '0', STR_PAD_LEFT);
+            $cleanName = preg_replace('/[^A-Za-z0-9_-]/', '_', $enrollment->student->full_name);
+            $fileName = "Roll_{$roll}_{$enrollment->student->admission_no}_{$cleanName}.pdf";
+
+            $zip->addFromString($fileName, $pdf->output());
+            $pdfCount++;
+        }
+
+        $zip->close();
+
+        if ($pdfCount === 0) {
+            @unlink($zipFile);
+
+            return back()->with('error', 'No computed results found to generate individual marksheets for this section.');
+        }
+
+        $downloadFileName = "Marksheets-{$exam->name}-{$section->name}.zip";
+
+        return response()->download($zipFile, $downloadFileName, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
 }

@@ -54,5 +54,10 @@ class AttendanceTest extends TestCase
         $this->assertNotNull($attDay);
         $this->assertEquals(1, $attDay->present_count);
         $this->assertEquals(1, $attDay->absent_count);
+
+        // Verify automated absent parent alert in notification logs (Doc 6 & Doc 9)
+        $this->assertDatabaseHas('notification_logs', [
+            'template_key' => 'attendance_absent',
+        ]);
     }
 }

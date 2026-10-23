@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{exam}/report-card/{enrollment}', [ExamController::class, 'reportCard'])->name('report-card');
         Route::get('/{exam}/marksheet/{enrollment}', [ExamController::class, 'reportCard'])->name('marksheet');
         Route::get('/{exam}/class-marksheet', [ExamController::class, 'classMarksheet'])->name('class-marksheet');
+        Route::get('/{exam}/bulk-marksheets', [ExamController::class, 'bulkMarksheetsZip'])->name('bulk-marksheets');
         Route::get('/{exam}/subject/{examSubject}/download-marksheet', [ExamController::class, 'downloadSubjectMarksheet'])->name('subject-marksheet');
     });
 
@@ -121,6 +122,7 @@ Route::middleware('auth')->group(function () {
     // Administration Zone (Protected by Super Admin & School Admin Roles)
     Route::middleware('role:Super Admin|School Admin')->group(function () {
         // School Management (Multi-Campus Registry & Child Entity Inspector)
+        Route::post('admin/schools/switch-active', [SchoolManagementController::class, 'switchActive'])->name('admin.schools.switch-active');
         Route::resource('admin/schools', SchoolManagementController::class)->names('admin.schools');
 
         // School Settings & Feature Package Management

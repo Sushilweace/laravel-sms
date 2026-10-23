@@ -46,6 +46,10 @@
             <a href="{{ request()->fullUrlWithQuery(['download' => '1']) }}" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl shadow-sm hover:shadow transition flex items-center gap-1.5">
                 <span>⬇</span> Download Marksheet (PDF)
             </a>
+
+            <a href="{{ route('exams.bulk-marksheets', [$exam, 'section_id' => $section->id]) }}" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded-xl shadow-sm hover:shadow transition flex items-center gap-1.5" title="Download ZIP archive with individual PDF report cards for all students">
+                <span>📦</span> Bulk Marksheets (ZIP)
+            </a>
         </div>
     </div>
 

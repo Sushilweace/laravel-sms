@@ -22,9 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Share current school instance with all views
+        // Share current school instance and campus directory with all views
         View::composer('*', function ($view) {
             $view->with('currentSchool', School::current());
+            $view->with('allSchools', School::orderBy('parent_id')->orderBy('name')->get());
         });
 
         // Blade feature directive: @feature('ai') ... @endfeature

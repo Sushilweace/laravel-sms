@@ -37,6 +37,22 @@ class School extends Model
 
     public static function current(): ?static
     {
+        // 1. Check explicit session override (active campus switcher)
+        if (function_exists('session') && session()->has('active_school_id')) {
+            $sessionSchoolId = session('active_school_id');
+            if ($sessionSchoolId && $school = static::find($sessionSchoolId)) {
+                return $school;
+            }
+        }
+
+        // 2. Check logged-in user assigned school
+        if (auth()->check() && auth()->user()->school_id) {
+            if ($userSchool = static::find(auth()->user()->school_id)) {
+                return $userSchool;
+            }
+        }
+
+        // 3. Fallback to primary root school
         return static::first();
     }
 

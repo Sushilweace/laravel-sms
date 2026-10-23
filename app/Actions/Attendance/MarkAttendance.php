@@ -55,6 +55,7 @@ class MarkAttendance
             $absentCount = 0;
             $lateCount = 0;
             $leaveCount = 0;
+            $newlyAbsentEnrollmentIds = [];
 
             foreach ($records as $enrollmentId => $status) {
                 if (! in_array($enrollmentId, $activeEnrollments)) {
@@ -81,6 +82,10 @@ class MarkAttendance
                     })
                     ->first();
 
+                if ($status === 'absent') {
+                    $newlyAbsentEnrollmentIds[] = $enrollmentId;
+                }
+
                 if ($existing) {
                     $existing->update([
                         'status' => $status,
@@ -100,6 +105,17 @@ class MarkAttendance
                 }
 
                 $this->updateSummary($enrollmentId, $targetDate);
+            }
+
+            // Automated Absence Notifications to Guardians (Doc 6 & Doc 9)
+            if (! empty($newlyAbsentEnrollmentIds)) {
+                $absentEnrollments = Enrollment::whereIn('id', $newlyAbsentEnrollmentIds)
+                    ->with(['student.guardians.user', 'section.schoolClass'])
+                    ->get();
+                $notifier = app(NotifyAbsentGuardians::class);
+                foreach ($absentEnrollments as $absentEnr) {
+                    $notifier->execute($absentEnr, $targetDateStr, $user);
+                }
             }
 
             $attDay = AttendanceDay::where('section_id', $section->id)

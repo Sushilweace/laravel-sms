@@ -203,4 +203,25 @@ class SchoolManagementTest extends TestCase
 
         $this->assertNull(School::find($branch->id));
     }
+
+    public function test_admin_can_switch_active_campus_context(): void
+    {
+        $branch = School::create([
+            'name' => 'Campus Branch South',
+            'code' => 'CBS-'.rand(100, 999),
+            'parent_id' => $this->rootSchool->id,
+            'timezone' => 'Asia/Kolkata',
+            'currency' => 'INR',
+            'package_tier' => 'standard',
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.schools.switch-active'), [
+            'school_id' => $branch->id,
+        ]);
+
+        $response->assertSessionHas('active_school_id', $branch->id);
+        $this->assertEquals($branch->id, School::current()->id);
+        $this->assertEquals('Campus Branch South', School::current()->name);
+    }
 }

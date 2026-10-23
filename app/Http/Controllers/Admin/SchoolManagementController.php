@@ -256,4 +256,16 @@ class SchoolManagementController extends Controller
         return redirect()->route('admin.schools.index')
             ->with('success', "School '{$name}' was deleted successfully.");
     }
+
+    public function switchActive(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        $school = School::findOrFail($data['school_id']);
+        session(['active_school_id' => $school->id]);
+
+        return back()->with('success', "Active campus context switched to: {$school->name} ({$school->code})");
+    }
 }
