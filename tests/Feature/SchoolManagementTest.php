@@ -27,6 +27,13 @@ class SchoolManagementTest extends TestCase
         $response->assertRedirect('/login');
     }
 
+    public function test_non_admin_user_is_forbidden_from_school_management(): void
+    {
+        $teacher = User::where('email', 'teacher@school.test')->firstOrFail();
+        $response = $this->actingAs($teacher)->get('/admin/schools');
+        $response->assertStatus(403);
+    }
+
     public function test_admin_can_view_schools_index_and_metrics(): void
     {
         $response = $this->actingAs($this->admin)->get('/admin/schools');

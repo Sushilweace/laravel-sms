@@ -118,25 +118,28 @@ Route::middleware('auth')->group(function () {
         Route::post('/suggestions/{suggestion}/review', [AiController::class, 'reviewSuggestion'])->name('review-suggestion');
     });
 
-    // School Management (Multi-Campus Registry & Child Entity Inspector)
-    Route::resource('admin/schools', SchoolManagementController::class)->names('admin.schools');
+    // Administration Zone (Protected by Super Admin & School Admin Roles)
+    Route::middleware('role:Super Admin|School Admin')->group(function () {
+        // School Management (Multi-Campus Registry & Child Entity Inspector)
+        Route::resource('admin/schools', SchoolManagementController::class)->names('admin.schools');
 
-    // School Settings & Feature Package Management
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/school', [SchoolSettingsController::class, 'edit'])->name('school');
-        Route::post('/school', [SchoolSettingsController::class, 'update'])->name('school.update');
-        Route::post('/school/calculate', [SchoolSettingsController::class, 'calculateApi'])->name('school.calculate');
-    });
+        // School Settings & Feature Package Management
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/school', [SchoolSettingsController::class, 'edit'])->name('school');
+            Route::post('/school', [SchoolSettingsController::class, 'update'])->name('school.update');
+            Route::post('/school/calculate', [SchoolSettingsController::class, 'calculateApi'])->name('school.calculate');
+        });
 
-    // Admin Logs (Error Logs & Mail / Notification Sent Logs)
-    Route::prefix('admin/logs')->name('admin.logs.')->group(function () {
-        Route::get('/errors', [ErrorLogController::class, 'index'])->name('errors');
-        Route::get('/errors/download', [ErrorLogController::class, 'download'])->name('errors.download');
-        Route::post('/errors/clear', [ErrorLogController::class, 'clear'])->name('errors.clear');
+        // Admin Logs (Error Logs & Mail / Notification Sent Logs)
+        Route::prefix('admin/logs')->name('admin.logs.')->group(function () {
+            Route::get('/errors', [ErrorLogController::class, 'index'])->name('errors');
+            Route::get('/errors/download', [ErrorLogController::class, 'download'])->name('errors.download');
+            Route::post('/errors/clear', [ErrorLogController::class, 'clear'])->name('errors.clear');
 
-        Route::get('/mail', [MailLogController::class, 'index'])->name('mail');
-        Route::get('/mail/{log}', [MailLogController::class, 'show'])->name('mail.show');
-        Route::post('/mail/{log}/resend', [MailLogController::class, 'resend'])->name('mail.resend');
-        Route::post('/mail/test', [MailLogController::class, 'sendTest'])->name('mail.test');
+            Route::get('/mail', [MailLogController::class, 'index'])->name('mail');
+            Route::get('/mail/{log}', [MailLogController::class, 'show'])->name('mail.show');
+            Route::post('/mail/{log}/resend', [MailLogController::class, 'resend'])->name('mail.resend');
+            Route::post('/mail/test', [MailLogController::class, 'sendTest'])->name('mail.test');
+        });
     });
 });
