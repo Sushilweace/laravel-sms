@@ -90,11 +90,14 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-right space-x-2">
-                            @if($inv->status !== 'paid')
-                            <a href="{{ route('fees.collect', $inv) }}" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-lg border border-indigo-200 transition">
-                                Collect →
-                            </a>
-                            @elseif($inv->payments->first())
+                            @can('fees.collect')
+                                @if($inv->status !== 'paid')
+                                <a href="{{ route('fees.collect', $inv) }}" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-lg border border-indigo-200 transition">
+                                    Collect →
+                                </a>
+                                @endif
+                            @endcan
+                            @if($inv->payments->first())
                             <a href="{{ route('fees.receipt', $inv->payments->first()) }}" class="text-xs text-slate-600 hover:text-indigo-600 font-semibold">
                                 Receipt →
                             </a>

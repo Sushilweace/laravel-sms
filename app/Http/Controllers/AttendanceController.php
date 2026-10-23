@@ -8,9 +8,12 @@ use App\Models\Attendance;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceSummary;
 use App\Models\Enrollment;
+use App\Models\Guardian;
 use App\Models\Section;
 use App\Models\Setting;
+use App\Models\Student;
 use App\Models\User;
+use App\Support\AttendancePercentage;
 use App\Support\WorkingCalendar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,37 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $currentYear = AcademicYear::current();
 
+        // 1. If user is Student or Parent, show their personalized attendance history & calendar
+        if ($user->hasRole(['Student', 'Parent'])) {
+            $student = null;
+            if ($user->hasRole('Student')) {
+                $student = $user->student ?? Student::where('user_id', $user->id)->first();
+            } elseif ($user->hasRole('Parent')) {
+                $guardian = $user->guardian ?? Guardian::where('user_id', $user->id)->first();
+                $student = $guardian?->students()->first();
+            }
+
+            $enrollment = $student?->currentEnrollment;
+            $attendances = $enrollment
+                ? Attendance::where('enrollment_id', $enrollment->id)->latest('date')->take(60)->get()
+                : collect();
+
+            $totalDays = $attendances->count();
+            $presentDays = $attendances->where('status', 'present')->count();
+            $absentDays = $attendances->where('status', 'absent')->count();
+            $lateDays = $attendances->where('status', 'late')->count();
+            $leaveDays = $attendances->where('status', 'leave')->count();
+
+            $percentage = $totalDays > 0
+                ? AttendancePercentage::calculate($presentDays, $lateDays, $absentDays, $leaveDays)
+                : '100.0';
+
+            $stats = compact('totalDays', 'presentDays', 'absentDays', 'lateDays', 'leaveDays', 'percentage');
+
+            return view('attendance.student', compact('student', 'enrollment', 'attendances', 'stats', 'currentYear'));
+        }
+
+        // 2. Teachers and Admins roll-call marking sheet
         $sectionsQuery = Section::where('academic_year_id', $currentYear?->id)->with('schoolClass');
         if ($user->hasRole('Teacher') && $user->staff) {
             $allowedSectionIds = $user->staff->visibleSectionIds();
@@ -66,6 +100,10 @@ class AttendanceController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        if ($user->hasRole(['Student', 'Parent']) || ! $user->can('attendance.mark')) {
+            abort(403, 'Unauthorized. Students and parents cannot mark daily attendance.');
+        }
+
         $data = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'date' => 'required|date',
@@ -87,6 +125,13 @@ class AttendanceController extends Controller
 
     public function reports(Request $request): View
     {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if ($user->hasRole(['Student', 'Parent'])) {
+            abort(403, 'Unauthorized access to institutional attendance reports.');
+        }
+
         $currentYear = AcademicYear::current();
         $sections = Section::where('academic_year_id', $currentYear?->id)->with('schoolClass')->get();
         $selectedSectionId = $request->input('section_id', $sections->first()?->id);

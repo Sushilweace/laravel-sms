@@ -14,6 +14,10 @@ class StaffController extends Controller
 {
     public function index(Request $request): View
     {
+        if (! auth()->user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher', 'Accountant'])) {
+            abort(403, 'Unauthorized. Staff directory is restricted to authorized personnel.');
+        }
+
         $query = Staff::with('user');
 
         if ($request->filled('search')) {
@@ -33,11 +37,19 @@ class StaffController extends Controller
 
     public function create(): View
     {
+        if (! auth()->user()->hasAnyRole(['Super Admin', 'School Admin'])) {
+            abort(403, 'Unauthorized. Registering new staff members requires administrator privileges.');
+        }
+
         return view('staff.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        if (! auth()->user()->hasAnyRole(['Super Admin', 'School Admin'])) {
+            abort(403, 'Unauthorized. Registering new staff members requires administrator privileges.');
+        }
+
         $data = $request->validate([
             'first_name' => 'required|string|max:80',
             'last_name' => 'required|string|max:80',
@@ -83,6 +95,10 @@ class StaffController extends Controller
 
     public function show(Staff $staff): View
     {
+        if (! auth()->user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher', 'Accountant'])) {
+            abort(403, 'Unauthorized. Staff profile inspection is restricted to authorized personnel.');
+        }
+
         $staff->load(['teachingAssignments.section.schoolClass', 'teachingAssignments.subject', 'classTeacherSections']);
 
         return view('staff.show', compact('staff'));

@@ -18,6 +18,10 @@ class AcademicController extends Controller
 {
     public function index(): View
     {
+        if (! auth()->user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Academic setup is restricted to academic staff.');
+        }
+
         $years = AcademicYear::latest()->get();
         $currentYear = AcademicYear::current();
         $classes = SchoolClass::with(['sections' => function ($q) use ($currentYear) {

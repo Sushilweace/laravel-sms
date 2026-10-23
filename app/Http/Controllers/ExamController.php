@@ -12,10 +12,13 @@ use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamSubject;
 use App\Models\GradeScale;
+use App\Models\Guardian;
 use App\Models\Mark;
+use App\Models\Result;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Section;
+use App\Models\Student;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +32,33 @@ class ExamController extends Controller
 {
     public function index(): View
     {
+        /** @var User $user */
+        $user = Auth::user();
         $currentYear = AcademicYear::current();
+
+        // 1. If user is Student or Parent, show their personal exams & published report cards
+        if ($user->hasRole(['Student', 'Parent'])) {
+            $student = null;
+            if ($user->hasRole('Student')) {
+                $student = $user->student ?? Student::where('user_id', $user->id)->first();
+            } elseif ($user->hasRole('Parent')) {
+                $guardian = $user->guardian ?? Guardian::where('user_id', $user->id)->first();
+                $student = $guardian?->students()->first();
+            }
+
+            $enrollment = $student?->currentEnrollment;
+            $results = $enrollment
+                ? Result::where('enrollment_id', $enrollment->id)->with(['exam.academicYear', 'exam.gradeScale'])->get()
+                : collect();
+
+            $publishedExams = Exam::where('academic_year_id', $currentYear?->id)
+                ->where('status', 'published')
+                ->latest()
+                ->get();
+
+            return view('exams.student', compact('student', 'enrollment', 'results', 'publishedExams', 'currentYear'));
+        }
+
         $exams = Exam::where('academic_year_id', $currentYear?->id)
             ->with(['academicYear', 'gradeScale'])
             ->latest()
@@ -40,6 +69,10 @@ class ExamController extends Controller
 
     public function create(): View
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Exam management is restricted to academic staff.');
+        }
+
         $currentYear = AcademicYear::current();
         $gradeScales = GradeScale::all();
         $classes = SchoolClass::with('subjects')->get();
@@ -49,6 +82,9 @@ class ExamController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Exam management is restricted to academic staff.');
+        }
         $data = $request->validate([
             'name' => 'required|string|max:120',
             'term' => 'nullable|string|max:40',
@@ -206,6 +242,17 @@ class ExamController extends Controller
 
     public function reportCard(Exam $exam, Enrollment $enrollment, Request $request): View|Response
     {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Non-faculty users (students, parents) can only download report cards of their own enrollment
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            $isOwn = Enrollment::visibleTo($user)->where('id', $enrollment->id)->exists();
+            if (! $isOwn) {
+                abort(403, 'Unauthorized access to student progress report card.');
+            }
+        }
+
         $enrollment->load(['student', 'section.schoolClass', 'academicYear']);
         $exam->load(['gradeScale.grades']);
 
@@ -234,6 +281,10 @@ class ExamController extends Controller
 
     public function classMarksheet(Exam $exam, Request $request): View|Response|StreamedResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Consolidated class marksheets can only be accessed by teachers and administrators.');
+        }
+
         $classIds = $exam->examSubjects()->pluck('school_class_id')->unique();
         $sections = Section::whereIn('school_class_id', $classIds)
             ->where('academic_year_id', $exam->academic_year_id)
@@ -438,6 +489,10 @@ class ExamController extends Controller
 
     public function bulkMarksheetsZip(Exam $exam, Request $request)
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Bulk marksheet export is restricted to faculty.');
+        }
+
         $exam->load(['gradeScale.grades']);
         $school = School::current() ?? School::first();
 

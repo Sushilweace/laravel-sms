@@ -8,10 +8,12 @@ use App\Actions\Fees\ReversePayment;
 use App\Models\AcademicYear;
 use App\Models\FeeHead;
 use App\Models\FeeStructure;
+use App\Models\Guardian;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\School;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +26,57 @@ class FeeController extends Controller
 {
     public function index(): View
     {
+        /** @var User $user */
+        $user = Auth::user();
         $currentYear = AcademicYear::current();
+
+        // 1. If user is Student or Parent, show their personalized student fee & dues portal
+        if ($user->hasRole(['Student', 'Parent'])) {
+            $student = null;
+            if ($user->hasRole('Student')) {
+                $student = $user->student ?? Student::where('user_id', $user->id)->first();
+            } elseif ($user->hasRole('Parent')) {
+                $guardian = $user->guardian ?? Guardian::where('user_id', $user->id)->first();
+                $student = $guardian?->students()->first();
+            }
+
+            $invoices = Invoice::visibleTo($user)
+                ->where('academic_year_id', $currentYear?->id)
+                ->with(['enrollment.student', 'enrollment.section.schoolClass', 'items.feeHead', 'payments'])
+                ->latest('created_at')
+                ->get();
+
+            $payments = Payment::whereIn('invoice_id', $invoices->pluck('id'))
+                ->where('status', 'completed')
+                ->with(['invoice.enrollment.student', 'collector'])
+                ->latest()
+                ->get();
+
+            $today = now()->toDateString();
+            $myTotalInvoiced = $invoices->sum('total_amount');
+            $myTotalPaid = $invoices->sum('paid_total');
+            $myBalanceDue = $invoices->sum(fn ($i) => (float) $i->balance_due);
+
+            $overdueInvoices = $invoices->filter(fn ($i) => $i->status !== 'paid' && $i->due_on && $i->due_on < $today && (float) $i->balance_due > 0);
+            $myOverdueAmount = $overdueInvoices->sum(fn ($i) => (float) $i->balance_due);
+            $myOverdueCount = $overdueInvoices->count();
+
+            $studentStats = [
+                'totalInvoiced' => $myTotalInvoiced,
+                'totalPaid' => $myTotalPaid,
+                'balanceDue' => $myBalanceDue,
+                'overdueAmount' => $myOverdueAmount,
+                'overdueCount' => $myOverdueCount,
+            ];
+
+            return view('fees.student', compact('student', 'invoices', 'payments', 'studentStats', 'currentYear', 'overdueInvoices'));
+        }
+
+        // 2. Only Accountants and Admins can see the master institutional ledger
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Fee management and institutional financials are reserved for accounts personnel.');
+        }
+
         $feeHeads = FeeHead::all();
         $classes = SchoolClass::orderBy('numeric_level')->get();
         $structures = FeeStructure::where('academic_year_id', $currentYear?->id)
@@ -42,6 +94,10 @@ class FeeController extends Controller
 
     public function storeHead(Request $request): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Financial operations require Accountant or Administrator permissions.');
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:80',
             'code' => 'required|string|max:30|unique:fee_heads,code',
@@ -56,6 +112,10 @@ class FeeController extends Controller
 
     public function storeStructure(Request $request): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Financial operations require Accountant or Administrator permissions.');
+        }
+
         $data = $request->validate([
             'fee_head_id' => 'required|exists:fee_heads,id',
             'school_class_id' => 'required|exists:school_classes,id',
@@ -110,6 +170,10 @@ class FeeController extends Controller
 
     public function generateInvoices(Request $request, GenerateInvoices $generator): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Generating school invoices requires accountant permissions.');
+        }
+
         $data = $request->validate([
             'period_key' => 'required|string|max:50',
             'due_date' => 'required|date',
@@ -126,6 +190,10 @@ class FeeController extends Controller
 
     public function collectView(Invoice $invoice): View
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Fee collection is restricted to accounting personnel.');
+        }
+
         $invoice->load(['enrollment.student', 'enrollment.section.schoolClass', 'items.feeHead', 'payments.collector']);
 
         return view('fees.collect', compact('invoice'));
@@ -135,6 +203,10 @@ class FeeController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Fee collection is restricted to accounting personnel.');
+        }
 
         $data = $request->validate([
             'amount' => 'required|numeric|min:1',
@@ -157,6 +229,10 @@ class FeeController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. Reversing payments requires administrator or accountant authorization.');
+        }
+
         $data = $request->validate([
             'reason' => 'required|string|max:255',
         ]);
@@ -172,6 +248,17 @@ class FeeController extends Controller
 
     public function receipt(Payment $payment, Request $request): View|Response
     {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Ensure non-accounts users (students, parents) can only access receipts of their own invoices
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            $isOwnInvoice = Invoice::visibleTo($user)->where('id', $payment->invoice_id)->exists();
+            if (! $isOwnInvoice) {
+                abort(403, 'Unauthorized access to this payment receipt.');
+            }
+        }
+
         $payment->load(['invoice.enrollment.student', 'invoice.enrollment.section.schoolClass', 'collector']);
         $school = School::current() ?? School::first();
 
@@ -188,6 +275,14 @@ class FeeController extends Controller
 
     public function defaulters(): View
     {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Overdue defaulters list of all students is strictly restricted to accountants and administrators
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Accountant'])) {
+            abort(403, 'Unauthorized. The institutional overdue defaulters register can only be viewed by accountants and administrators.');
+        }
+
         $currentYear = AcademicYear::current();
         $overdueInvoices = Invoice::where('academic_year_id', $currentYear?->id)
             ->overdue()

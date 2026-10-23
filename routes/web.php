@@ -34,7 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Academic Setup
-    Route::prefix('academic')->name('academic.')->group(function () {
+    Route::prefix('academic')->name('academic.')->middleware('role:Super Admin|School Admin|Teacher')->group(function () {
         Route::get('/', [AcademicController::class, 'index'])->name('index');
         Route::post('/years', [AcademicController::class, 'storeYear'])->name('years.store');
         Route::post('/years/{year}/current', [AcademicController::class, 'setCurrentYear'])->name('years.set-current');
@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Staff Module
-    Route::prefix('staff')->name('staff.')->middleware('feature:staff')->group(function () {
+    Route::prefix('staff')->name('staff.')->middleware(['feature:staff', 'role:Super Admin|School Admin|Teacher|Accountant'])->group(function () {
         Route::get('/', [StaffController::class, 'index'])->name('index');
         Route::get('/create', [StaffController::class, 'create'])->name('create');
         Route::post('/', [StaffController::class, 'store'])->name('store');
@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // AI Assistant
-    Route::prefix('ai')->name('ai.')->middleware('feature:ai')->group(function () {
+    Route::prefix('ai')->name('ai.')->middleware(['feature:ai', 'role:Super Admin|School Admin|Teacher'])->group(function () {
         Route::get('/', [AiController::class, 'index'])->name('index');
         Route::post('/generate-remarks', [AiController::class, 'generateRemarks'])->name('generate-remarks');
         Route::post('/draft-notice', [AiController::class, 'draftNotice'])->name('draft-notice');

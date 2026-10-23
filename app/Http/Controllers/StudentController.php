@@ -18,10 +18,19 @@ use Illuminate\View\View;
 
 class StudentController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         /** @var User $user */
         $user = Auth::user();
+
+        // If user is a student, take them directly to their own student profile
+        if ($user->hasRole('Student')) {
+            $student = $user->student ?? Student::where('user_id', $user->id)->first();
+            if ($student) {
+                return redirect()->route('students.show', $student);
+            }
+        }
+
         $query = Student::visibleTo($user)->with(['currentEnrollment.section.schoolClass']);
 
         if ($request->filled('search')) {
@@ -49,6 +58,10 @@ class StudentController extends Controller
 
     public function create(): View
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Student admissions are restricted to authorized school staff.');
+        }
+
         $classes = SchoolClass::with(['sections' => function ($q) {
             $q->where('academic_year_id', AcademicYear::current()?->id);
         }])->get();
@@ -58,6 +71,10 @@ class StudentController extends Controller
 
     public function store(Request $request, AdmitStudent $admitStudent): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Student admissions are restricted to authorized school staff.');
+        }
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:80',
             'last_name' => 'required|string|max:80',
@@ -135,6 +152,10 @@ class StudentController extends Controller
 
     public function promoteView(): View
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Student promotions are restricted to authorized school staff.');
+        }
+
         $years = AcademicYear::latest()->get();
         $currentYear = AcademicYear::current();
         $classes = SchoolClass::with('sections')->get();
@@ -144,6 +165,10 @@ class StudentController extends Controller
 
     public function promoteSubmit(Request $request, PromoteEnrollment $promoter): RedirectResponse
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Student promotions are restricted to authorized school staff.');
+        }
+
         $data = $request->validate([
             'from_section_id' => 'required|exists:sections,id',
             'to_academic_year_id' => 'required|exists:academic_years,id',

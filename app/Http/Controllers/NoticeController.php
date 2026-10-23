@@ -30,6 +30,10 @@ class NoticeController extends Controller
 
     public function create(): View
     {
+        if (! Auth::user()->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Drafting notices requires staff privileges.');
+        }
+
         $classes = SchoolClass::all();
 
         return view('notices.create', compact('classes'));
@@ -39,6 +43,10 @@ class NoticeController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+
+        if (! $user->hasAnyRole(['Super Admin', 'School Admin', 'Teacher'])) {
+            abort(403, 'Unauthorized. Publishing notices requires staff privileges.');
+        }
 
         $data = $request->validate([
             'title' => 'required|string|max:150',
