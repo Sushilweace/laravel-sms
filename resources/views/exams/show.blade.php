@@ -88,14 +88,24 @@
 
     <!-- Consolidated Computed Results & Ranks -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h3 class="font-bold text-slate-900 text-sm">Official Consolidated Results & Ranks</h3>
+                <h3 class="font-bold text-slate-900 text-sm">Official Consolidated Results & Marksheets</h3>
                 <p class="text-xs text-slate-500 mt-0.5">Computed using CBSE Standard Grade Scale with rank ties skipped.</p>
             </div>
-            @if($exam->results_computed_at)
-            <span class="text-xs text-slate-500">Last computed: {{ $exam->results_computed_at->format('d M Y, h:i A') }}</span>
-            @endif
+            <div class="flex flex-wrap items-center gap-2">
+                @if($results->isNotEmpty())
+                    <a href="{{ route('exams.class-marksheet', $exam) }}" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg border border-slate-200 transition flex items-center gap-1">
+                        👁 View Tabulation Register
+                    </a>
+                    <a href="{{ route('exams.class-marksheet', [$exam, 'format' => 'csv']) }}" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-3 py-1.5 rounded-lg border border-emerald-200 transition flex items-center gap-1">
+                        📊 Export CSV
+                    </a>
+                    <a href="{{ route('exams.class-marksheet', [$exam, 'download' => '1']) }}" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">
+                        ⬇ Download Class Marksheet (PDF)
+                    </a>
+                @endif
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -144,9 +154,14 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-right">
-                            <a href="{{ route('exams.report-card', [$exam, $res->enrollment]) }}" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
-                                View PDF →
-                            </a>
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{{ route('exams.report-card', [$exam, $res->enrollment]) }}" class="text-xs text-slate-600 hover:text-slate-900 font-medium px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg transition" title="Preview Report Card">
+                                    Preview
+                                </a>
+                                <a href="{{ route('exams.report-card', [$exam, $res->enrollment, 'download' => '1']) }}" class="text-xs text-indigo-700 hover:text-indigo-900 font-semibold px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition flex items-center gap-1" title="Download Official Marksheet PDF">
+                                    <span>⬇</span> Marksheet PDF
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     @empty

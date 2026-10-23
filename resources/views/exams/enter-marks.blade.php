@@ -18,16 +18,26 @@
             <p class="text-xs text-slate-500">Max Marks: <strong>{{ $examSubject->max_marks }}</strong> | Pass Marks: <strong>{{ $examSubject->pass_marks }}</strong></p>
         </div>
 
-        <form action="{{ route('exams.enter-marks', [$exam, $examSubject]) }}" method="GET" class="flex items-center gap-2">
-            <label class="text-xs text-slate-500 font-medium">Section:</label>
-            <select name="section_id" onchange="this.form.submit()" class="text-xs px-3 py-1.5 rounded-xl border border-slate-300">
-                @foreach($sections as $sec)
-                <option value="{{ $sec->id }}" {{ $selectedSectionId == $sec->id ? 'selected' : '' }}>
-                    Section {{ $sec->name }}
-                </option>
-                @endforeach
-            </select>
-        </form>
+        <div class="flex items-center gap-2">
+            <form action="{{ route('exams.enter-marks', [$exam, $examSubject]) }}" method="GET" class="flex items-center gap-2">
+                <label class="text-xs text-slate-500 font-medium">Section:</label>
+                <select name="section_id" onchange="this.form.submit()" class="text-xs px-3 py-1.5 rounded-xl border border-slate-300">
+                    @foreach($sections as $sec)
+                    <option value="{{ $sec->id }}" {{ $selectedSectionId == $sec->id ? 'selected' : '' }}>
+                        Section {{ $sec->name }}
+                    </option>
+                    @endforeach
+                </select>
+            </form>
+
+            <a href="{{ route('exams.subject-marksheet', [$exam, $examSubject, 'section_id' => $selectedSectionId, 'format' => 'csv']) }}" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-2.5 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1" title="Export Marks as CSV">
+                <span>📊</span> CSV
+            </a>
+
+            <a href="{{ route('exams.subject-marksheet', [$exam, $examSubject, 'section_id' => $selectedSectionId, 'download' => '1']) }}" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-3 py-1.5 rounded-xl border border-indigo-200 transition flex items-center gap-1" title="Download Official Subject Marksheet PDF">
+                <span>⬇</span> Marksheet PDF
+            </a>
+        </div>
     </div>
 
     <!-- Marks Entry Form Table -->

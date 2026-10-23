@@ -135,9 +135,14 @@
                                 Grade: <span class="font-bold text-emerald-600">{{ $res->grade }}</span>
                             </div>
                         </div>
-                        <a href="{{ route('exams.report-card', [$res->exam, $enrollment]) }}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 transition">
-                            View Report Card →
-                        </a>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('exams.report-card', [$res->exam, $enrollment]) }}" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2.5 py-1.5 rounded-lg transition text-xs">
+                                Preview
+                            </a>
+                            <a href="{{ route('exams.report-card', [$res->exam, $enrollment, 'download' => '1']) }}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 transition text-xs flex items-center gap-1" title="Download Official Marksheet PDF">
+                                <span>⬇</span> Marksheet PDF
+                            </a>
+                        </div>
                     </div>
                     @empty
                     <p class="text-slate-400 text-xs py-3">No exam results recorded for this academic year.</p>

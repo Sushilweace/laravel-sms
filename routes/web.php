@@ -80,6 +80,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/{exam}/subject/{examSubject}/marks', [ExamController::class, 'enterMarksView'])->name('enter-marks');
         Route::post('/{exam}/subject/{examSubject}/marks', [ExamController::class, 'saveMarks'])->name('save-marks');
         Route::get('/{exam}/report-card/{enrollment}', [ExamController::class, 'reportCard'])->name('report-card');
+        Route::get('/{exam}/marksheet/{enrollment}', [ExamController::class, 'reportCard'])->name('marksheet');
+        Route::get('/{exam}/class-marksheet', [ExamController::class, 'classMarksheet'])->name('class-marksheet');
+        Route::get('/{exam}/subject/{examSubject}/download-marksheet', [ExamController::class, 'downloadSubjectMarksheet'])->name('subject-marksheet');
     });
 
     // Fees & Receipts Module

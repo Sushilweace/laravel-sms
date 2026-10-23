@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExamController extends Controller
 {
@@ -225,9 +226,213 @@ class ExamController extends Controller
         if ($request->boolean('download')) {
             $pdf = Pdf::loadView('exams.report-card-pdf', $data);
 
-            return $pdf->download("Report-Card-{$enrollment->student->admission_no}-{$exam->name}.pdf");
+            return $pdf->download("Marksheet-{$enrollment->student->admission_no}-{$exam->name}.pdf");
         }
 
         return view('exams.report-card', $data);
+    }
+
+    public function classMarksheet(Exam $exam, Request $request): View|Response|StreamedResponse
+    {
+        $classIds = $exam->examSubjects()->pluck('school_class_id')->unique();
+        $sections = Section::whereIn('school_class_id', $classIds)
+            ->where('academic_year_id', $exam->academic_year_id)
+            ->with('schoolClass')
+            ->get();
+
+        $selectedSectionId = $request->input('section_id', $sections->first()?->id);
+        $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
+
+        if (! $section) {
+            abort(404, 'No sections found for this examination.');
+        }
+
+        $subjects = $exam->examSubjects()
+            ->where('school_class_id', $section->school_class_id)
+            ->with('subject')
+            ->get();
+
+        $enrollments = Enrollment::where('section_id', $section->id)
+            ->where('status', 'active')
+            ->with('student')
+            ->orderBy('roll_number')
+            ->get();
+
+        $marks = Mark::whereIn('exam_subject_id', $subjects->pluck('id'))
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->get()
+            ->groupBy('enrollment_id');
+
+        $results = $exam->results()
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->get()
+            ->keyBy('enrollment_id');
+
+        // Statistics
+        $total = $enrollments->count();
+        $appeared = 0;
+        $passed = 0;
+        $failed = 0;
+        $percentages = [];
+
+        foreach ($enrollments as $enr) {
+            $stM = $marks[$enr->id] ?? collect();
+            if ($stM->isNotEmpty()) {
+                $appeared++;
+            }
+            $res = $results[$enr->id] ?? null;
+            if ($res) {
+                $percentages[] = (float) $res->percentage;
+                if ($res->result_status === 'pass') {
+                    $passed++;
+                } else {
+                    $failed++;
+                }
+            }
+        }
+
+        $avgPct = count($percentages) > 0 ? round(array_sum($percentages) / count($percentages), 1) : 0;
+        $highPct = count($percentages) > 0 ? max($percentages) : 0;
+        $lowPct = count($percentages) > 0 ? min($percentages) : 0;
+        $passRate = $appeared > 0 ? round(($passed / $appeared) * 100, 1) : 0;
+
+        $stats = [
+            'total' => $total,
+            'appeared' => $appeared,
+            'passed' => $passed,
+            'failed' => $failed,
+            'pass_percentage' => $passRate,
+            'average_percentage' => $avgPct,
+            'highest_percentage' => $highPct,
+            'lowest_percentage' => $lowPct,
+        ];
+
+        $school = School::current() ?? School::first();
+
+        // CSV Export
+        if ($request->input('format') === 'csv') {
+            $csvHeaders = array_merge(
+                ['Roll No', 'Admission No', 'Student Full Name'],
+                $subjects->map(fn ($s) => $s->subject->name.' (Max: '.(int) $s->max_marks.')')->toArray(),
+                ['Total Marks', 'Max Marks', 'Percentage', 'Grade', 'GPA', 'Class Rank', 'Section Rank', 'Result Status']
+            );
+
+            $rows = [];
+            foreach ($enrollments as $enr) {
+                $res = $results[$enr->id] ?? null;
+                $stM = $marks[$enr->id] ?? collect();
+
+                $row = [
+                    $enr->roll_number ?? '',
+                    $enr->student->admission_no,
+                    $enr->student->full_name,
+                ];
+
+                foreach ($subjects as $s) {
+                    $m = $stM->firstWhere('exam_subject_id', $s->id);
+                    if (! $m) {
+                        $row[] = '—';
+                    } elseif ($m->is_absent) {
+                        $row[] = 'AB';
+                    } else {
+                        $row[] = (float) $m->final_marks;
+                    }
+                }
+
+                $row[] = $res ? (float) $res->total_marks : '—';
+                $row[] = $res ? (int) $res->max_marks : '—';
+                $row[] = $res ? $res->percentage.'%' : '—';
+                $row[] = $res?->grade ?? '—';
+                $row[] = $res?->gpa ?? '—';
+                $row[] = $res?->class_rank ?? '—';
+                $row[] = $res?->section_rank ?? '—';
+                $row[] = $res ? strtoupper($res->result_status) : '—';
+
+                $rows[] = $row;
+            }
+
+            $fileName = "Marksheet-{$exam->name}-{$section->name}.csv";
+
+            return response()->streamDownload(function () use ($csvHeaders, $rows) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, $csvHeaders);
+                foreach ($rows as $r) {
+                    fputcsv($out, $r);
+                }
+                fclose($out);
+            }, $fileName, ['Content-Type' => 'text/csv']);
+        }
+
+        // PDF Download
+        if ($request->boolean('download') || $request->input('format') === 'pdf') {
+            $pdf = Pdf::loadView('exams.class-marksheet-pdf', compact(
+                'exam', 'section', 'sections', 'subjects', 'enrollments', 'marks', 'results', 'stats', 'school'
+            ))->setPaper('a4', 'landscape');
+
+            return $pdf->download("Consolidated-Marksheet-{$exam->name}-{$section->name}.pdf");
+        }
+
+        return view('exams.class-marksheet', compact(
+            'exam', 'section', 'sections', 'subjects', 'enrollments', 'marks', 'results', 'stats', 'school'
+        ));
+    }
+
+    public function downloadSubjectMarksheet(Exam $exam, ExamSubject $examSubject, Request $request): Response|StreamedResponse
+    {
+        $examSubject->load(['subject', 'schoolClass']);
+        $sections = Section::where('school_class_id', $examSubject->school_class_id)
+            ->where('academic_year_id', $exam->academic_year_id)
+            ->get();
+
+        $selectedSectionId = $request->input('section_id', $sections->first()?->id);
+        $section = $sections->firstWhere('id', $selectedSectionId) ?? $sections->first();
+
+        $enrollments = Enrollment::where('section_id', $section?->id)
+            ->where('status', 'active')
+            ->with('student')
+            ->orderBy('roll_number')
+            ->get();
+
+        $marks = Mark::where('exam_subject_id', $examSubject->id)
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->get()
+            ->keyBy('enrollment_id');
+
+        $school = School::current() ?? School::first();
+
+        if ($request->input('format') === 'csv') {
+            $headers = ['Roll No', 'Admission No', 'Student Full Name', 'Max Marks', 'Marks Obtained', 'Grace Marks', 'Final Marks', 'Status', 'Remarks'];
+            $rows = [];
+            foreach ($enrollments as $enr) {
+                $m = $marks[$enr->id] ?? null;
+                $isPass = $m && ! $m->is_absent && (float) $m->final_marks >= ($examSubject->pass_marks ?? 33);
+                $rows[] = [
+                    $enr->roll_number ?? '',
+                    $enr->student->admission_no,
+                    $enr->student->full_name,
+                    (int) $examSubject->max_marks,
+                    $m ? ($m->is_absent ? 'AB' : (float) $m->marks_obtained) : '—',
+                    $m ? (float) $m->grace_marks : '0',
+                    $m ? (float) $m->final_marks : '—',
+                    $m ? ($m->is_absent ? 'ABSENT' : ($isPass ? 'PASS' : 'FAIL')) : '—',
+                    $m->remarks ?? '',
+                ];
+            }
+
+            return response()->streamDownload(function () use ($headers, $rows) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, $headers);
+                foreach ($rows as $r) {
+                    fputcsv($out, $r);
+                }
+                fclose($out);
+            }, "Subject-Marksheet-{$examSubject->subject->name}-{$exam->name}.csv", ['Content-Type' => 'text/csv']);
+        }
+
+        $pdf = Pdf::loadView('exams.subject-marksheet-pdf', compact(
+            'exam', 'examSubject', 'section', 'enrollments', 'marks', 'school'
+        ))->setPaper('a4', 'portrait');
+
+        return $pdf->download("Subject-Marksheet-{$examSubject->subject->name}-{$exam->name}.pdf");
     }
 }
