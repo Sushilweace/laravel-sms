@@ -219,7 +219,7 @@ class ExamController extends Controller
             ->with(['examSubject.subject'])
             ->get();
 
-        $school = School::first();
+        $school = School::current() ?? School::first();
 
         $data = compact('exam', 'enrollment', 'result', 'marks', 'school');
 

@@ -173,7 +173,7 @@ class FeeController extends Controller
     public function receipt(Payment $payment, Request $request): View|Response
     {
         $payment->load(['invoice.enrollment.student', 'invoice.enrollment.section.schoolClass', 'collector']);
-        $school = School::first();
+        $school = School::current() ?? School::first();
 
         $data = compact('payment', 'school');
 
